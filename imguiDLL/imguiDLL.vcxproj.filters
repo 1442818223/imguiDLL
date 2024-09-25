@@ -89,5 +89,13 @@
     <ClInclude Include="IM\detver.h">
       <Filter>IM</Filter>
     </ClInclude>
+    <ClInclude Include="dllmain.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Library Include="IM\detours.lib">
+      <Filter>IM</Filter>
+    </Library>
   </ItemGroup>
 </Project>

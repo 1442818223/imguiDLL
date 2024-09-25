@@ -74,7 +74,7 @@
     <IncludePath>$(DXSDK_DIR)Include;D:\WindowsCodeBlock\Detours-main\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IncludePath>$(DXSDK_DIR)\Include;D:\WindowsCodeBlock\Detours-main\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(DXSDK_DIR)\Include;C:\Detours-X64\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IncludePath>$(DXSDK_DIR)Include;D:\WindowsCodeBlock\Detours-main\include;$(IncludePath)</IncludePath>
@@ -115,7 +115,8 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalLibraryDirectories>$(DXSDK_DIR)\Lib\$(PlatformTarget);D:\WindowsCodeBlock\Detours-main\lib.X86;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(DXSDK_DIR)\Lib\$(PlatformTarget);C:\Detours-X64\lib.X64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -167,6 +168,7 @@
     <ClCompile Include="IM\imgui_widgets.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="dllmain.h" />
     <ClInclude Include="Helpers.h" />
     <ClInclude Include="ImWin.h" />
     <ClInclude Include="IM\detours.h" />
@@ -180,6 +182,9 @@
     <ClInclude Include="IM\imstb_textedit.h" />
     <ClInclude Include="IM\imstb_truetype.h" />
     <ClInclude Include="ph.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Library Include="IM\detours.lib" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

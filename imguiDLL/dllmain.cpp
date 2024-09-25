@@ -1,6 +1,9 @@
 ﻿
 #include "ph.h"
 
+#ifdef _WIN64
+#define GWL_WNDPROC GWLP_WNDPROC
+#endif
 
 typedef HRESULT(WINAPI* Reset_t)(LPDIRECT3DDEVICE9, D3DPRESENT_PARAMETERS*); //19
 typedef long(__stdcall* EndScene_t)(LPDIRECT3DDEVICE9);                      //42
@@ -21,17 +24,8 @@ EndScene_t oEndScene;
 WndProc_t oWndProc;////IMGUI窗口消息处理函数指针对象
 
 //64位改为LONG_PTR  ,其他地方完全一样
-DWORD* dDeviceVT = NULL;
-
-
-// 窗口消息处理，获取窗操作消息转嫁给IMGUI
-extern /*IMGUI_IMPL_API*/ LRESULT  ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
-LRESULT _stdcall hkwndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
-{
-	if (ImGui_ImplWin32_WndProcHandler(hwnd, msg, wParam, lParam)) return true;
-	return CallWindowProc(oWndProc, hwnd, msg, wParam, lParam);
-}
-
+//DWORD* dDeviceVT = NULL;
+PCHAR* dDeviceVT = NULL;
 
 
 //重画
@@ -47,6 +41,8 @@ HRESULT __stdcall hkReset(IDirect3DDevice9* pd3dDevice, D3DPRESENT_PARAMETERS* p
 	Helpers::HookFunction((PVOID*)(&oReset), hkReset);
 	return tmpReset;
 }
+
+
 
 void MineImGuiInit(IDirect3DDevice9* pd3dDevice) {
 	// 检查IMGUT版本
@@ -75,35 +71,33 @@ void MineImGuiInit(IDirect3DDevice9* pd3dDevice) {
 
 	ImGui_ImplWin32_Init(g_hwnd);
 	ImGui_ImplDX9_Init(pd3dDevice);
-
-
 }
-
-
-
+// 窗口消息处理，获取窗操作消息转嫁给IMGUI
+extern IMGUI_IMPL_API LRESULT  ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+LRESULT _stdcall hkwndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+	if (ImGui_ImplWin32_WndProcHandler(hwnd, msg, wParam, lParam)) return true;
+	return CallWindowProc(oWndProc, hwnd, msg, wParam, lParam);
+}
+bool firstcall = FALSE;
 HRESULT __stdcall hkEndScene(IDirect3DDevice9* pd3dDevice)
 {
-	//恢复
-	Helpers::UnHookFunction((PVOID*)(&oEndScene), hkEndScene);
-
 	//IMGUT初始化
-	static bool firstcall = TRUE;
-	if (firstcall)
+	if (firstcall == FALSE)
 	{
-		firstcall = !firstcall;
+		firstcall = TRUE;
 		MineImGuiInit(pd3dDevice);
 
 		//设置窗口过程函数
 		oWndProc = (WNDPROC)SetWindowLongPtr(g_hwnd, GWL_WNDPROC, (LONG_PTR)hkwndProc);
 
 	}
-
-
-	HRESULT result = pd3dDevice->EndScene();//必须执行原来的函数
-
+	//恢复
+	Helpers::UnHookFunction((PVOID*)(&oEndScene), hkEndScene);
 
 	LoadMyWin();//加载IMGUI窗口
 
+	HRESULT result = pd3dDevice->EndScene();//必须执行原来的函数
 	//HOOK
 	Helpers::HookFunction((PVOID*)(&oEndScene), hkEndScene);
 	return result; //返回原函数的返回值
@@ -142,14 +136,44 @@ void InitD3d() {
 	);
 
 	//开始hook对应的D3D9函数
-	dDeviceVT = (DWORD*)*(DWORD*)g_pd3dDevice; //拿到 IDirect3DDevice9虚表首地址
+	dDeviceVT = (PCHAR*)*(PCHAR*)g_pd3dDevice; //拿到 IDirect3DDevice9虚表首地址
 	oReset = (Reset_t)dDeviceVT[16]; //拿到第16个函数地址,保存起来以便于恢复
 	oEndScene = (EndScene_t)dDeviceVT[42];//拿到第42个函数地址
 
 	Helpers::HookFunction((PVOID*)(&oReset), hkReset);
 	Helpers::HookFunction((PVOID*)(&oEndScene), hkEndScene);
 }
+void unLoad()
+{
+    // 释放 ImGui 相关资源
+    ImGui_ImplDX9_Shutdown();
+    ImGui_ImplWin32_Shutdown();
+    ImGui::DestroyContext();
 
+    // 卸载钩子
+    Helpers::UnHookFunction((PVOID*)(&oReset), hkReset);
+    Helpers::UnHookFunction((PVOID*)(&oEndScene), hkEndScene);
+
+    // 释放 Direct3D 设备和 Direct3D 对象
+    if (g_pd3dDevice != NULL)
+    {
+        g_pd3dDevice->Release();
+        g_pd3dDevice = NULL;
+    }
+
+    if (g_Direct3D9 != NULL)
+    {
+        g_Direct3D9->Release();
+        g_Direct3D9 = NULL;
+    }
+
+    // 恢复窗口过程函数
+    if (g_hwnd != NULL && oWndProc != NULL)
+    {
+        SetWindowLongPtr(g_hwnd, GWL_WNDPROC, (LONG_PTR)oWndProc);
+        oWndProc = NULL;
+    }
+}
 // 当使用预编译的头时，需要使用此源文件，编译才能成功。
 BOOL WINAPI DllMain(
 	HINSTANCE hinstDLL,  // DLL模块的句柄
@@ -161,7 +185,7 @@ BOOL WINAPI DllMain(
 	{
 		// 加载Dll
 	case DLL_PROCESS_ATTACH:
-		::CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)InitD3d, NULL, NULL, NULL);
+		InitD3d();  //ce用创建线程会闪退 无痕驱动这里也不需要创建线程
 		break;
 		// 新建线程
 	case DLL_THREAD_ATTACH:
@@ -171,6 +195,7 @@ BOOL WINAPI DllMain(
 		break;
 		// 释放Dll
 	case DLL_PROCESS_DETACH:
+		unLoad();
 		break;
 	}
 	return TRUE;

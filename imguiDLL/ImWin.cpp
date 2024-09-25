@@ -1,4 +1,5 @@
 #include "ph.h"
+#include "dllmain.h"
 // 全局变量
 bool mainBeginsate = TRUE;
 ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_None;  // 使用 ImGuiTabBarFlags 类型，而不是布尔值
@@ -29,7 +30,7 @@ void LoadMyWin() {
 	ImGui::SetNextWindowSize(ImVec2(350, 450));
 
 	// 创建一个窗口
-	ImGui::Begin(u8"测试辅助窗口", &mainBeginsate);
+	ImGui::Begin(u8"测试辅助窗口", &mainBeginsate);//参数二指示窗口是否应继续显示
 
 	// 创建一个标签栏（Tab Bar），标签栏的标签为"tab1"，并指定 tab_bar_flags
 	if (ImGui::BeginTabBar("tab1", tab_bar_flags))
@@ -44,13 +45,15 @@ void LoadMyWin() {
 		ImGui::Checkbox(u8"开启飞天", &复选框);
 
 		// 创建一个按钮
-		if (ImGui::Button(u8"游戏初始化")) {
+		if (ImGui::Button(u8"安全卸载")) {
 			// 按钮点击后执行的操作
 			// 可以在这里写逻辑，比如初始化游戏等
+
+			unLoad();
 		}
 
 		// 调用选项一函数
-		选项一();
+		//选项一();
 
 		// 其他选项可以根据需要添加：
 		// 选项二();
