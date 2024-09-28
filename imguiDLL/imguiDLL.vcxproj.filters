@@ -98,4 +98,7 @@
       <Filter>IM</Filter>
     </Library>
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="说明.txt" />
+  </ItemGroup>
 </Project>
